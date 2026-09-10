@@ -1,98 +1,123 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { BottomTabInset, MaxContentWidth, Spacing } from "@/constants/theme";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { useAudioPlayer } from "expo-audio";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
+import { useState } from "react";
+import { StyleSheet, View } from "react-native";
+import Header from "./components/Header";
+import Main from "./components/Main";
 
 export default function HomeScreen() {
+  const audioSource = require("../../assets/sounds/tono.mp3");
+  const player = useAudioPlayer(audioSource);
+  const [recognizing, setRecognizing] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  type Props = {
+    handleStart: () => void;
+  };
+
+  function Recognizing({ handleStart }: Props) {
+    useSpeechRecognitionEvent("start", () => setRecognizing(true));
+    useSpeechRecognitionEvent("end", () => setRecognizing(false));
+
+    useSpeechRecognitionEvent("result", (event) => {
+      setTranscript(event.results[0]?.transcript);
+    });
+    useSpeechRecognitionEvent("error", (event) => {
+      console.log("error code:", event.error, "error message:", event.message);
+    });
+
+    return (
+      <>
+        {!recognizing ? (
+          <FontAwesome
+            name="microphone"
+            size={54}
+            color="white"
+            onPress={handleStart}
+          />
+        ) : (
+          <FontAwesome
+            name="microphone-slash"
+            size={54}
+            color="white"
+            onPress={() => ExpoSpeechRecognitionModule.stop()}
+          />
+        )}
+      </>
+    );
+  }
+
+  const handleStart = async () => {
+    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!result.granted) {
+      console.warn("Permissions not granted", result);
+      return;
+    }
+    // Start speech recognition
+    ExpoSpeechRecognitionModule.start({
+      lang: "es-ES",
+      interimResults: true,
+      continuous: false,
+    });
+    player.seekTo(0);
+    player.play();
+  };
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+    <View style={styles.container}>
+      <Header />
+      <Main name={transcript} />
+      <View style={styles.containerMicro}>
+        <Recognizing handleStart={handleStart} />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+    display: "flex",
+    flexDirection: "column",
   },
   safeArea: {
     flex: 1,
     paddingHorizontal: Spacing.four,
-    alignItems: 'center',
+    alignItems: "center",
     gap: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.three,
     maxWidth: MaxContentWidth,
   },
   heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     flex: 1,
     paddingHorizontal: Spacing.four,
     gap: Spacing.four,
   },
   title: {
-    textAlign: 'center',
+    textAlign: "center",
   },
   code: {
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   stepContainer: {
     gap: Spacing.three,
-    alignSelf: 'stretch',
+    alignSelf: "stretch",
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.four,
     borderRadius: Spacing.four,
+  },
+  containerMicro: {
+    flex: 1,
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#1C2541",
   },
 });
