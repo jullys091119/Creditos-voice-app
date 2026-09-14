@@ -74,7 +74,7 @@ function Main({ name }) {
       }
 
       const response = await getTransactions(client.id);
-
+      console.log(response, "respons")
       setClientId(client.id);
       setShowName(client);
       setCurrentSale(response);

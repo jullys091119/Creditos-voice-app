@@ -17,7 +17,7 @@ async function getTransactions(id) {
   return data || [];
 }
 
-async function getAllTransactions() {
+async function getAllTransactions(id: any) {
   const { data, error } = await supabase
     .from("transactions")
     .select("*")
@@ -66,6 +66,19 @@ async function insertHistory(items) {
   return { error: null };
 }
 
+async function getHistory(id) {
+  const { data, error } = await supabase
+    .from("history")
+    .select("*")
+    .eq("client_id", id)
+    .order("id", { ascending: false });
+
+  if (error) console.log(error, "No get histori");
+
+  return data || [];
+}
+
+
 async function pendingSet(id, pending) {
   const { data, error } = await supabase
     .from("transactions")
@@ -93,13 +106,12 @@ async function itemDelete(id) {
 }
 
 export {
-    getAllTransactions,
-    getClients,
-    getTransactions,
-    insertAmount,
-    insertHistory,
-    insertPay,
-    itemDelete,
-    pendingSet
+  getAllTransactions,
+  getClients, getHistory, getTransactions,
+  insertAmount,
+  insertHistory,
+  insertPay,
+  itemDelete,
+  pendingSet
 };
 
