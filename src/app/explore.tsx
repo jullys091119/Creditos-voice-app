@@ -1,10 +1,7 @@
 import { useAppContext } from "@/context";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { useEffect, useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
-import { BarChart } from "react-native-chart-kit/v2";
+import { BarChart } from "../../components/charts/bar-chart";
 import { getClients, getHistory } from "../../helpers";
 import DropdownUser from "../../src/app/components/DropdownUser";
 export default function TabTwoScreen() {
@@ -12,12 +9,14 @@ export default function TabTwoScreen() {
   const [total, setTotal] = useState(0);
   const [numberOfPurchases, setNumberOfPurchases] = useState(0);
   const [lastPayed, setLastPayed] = useState<any[]>([]);
-  const [chartData, setCharData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<any[]>([]);
 
   const id = value || undefined;
   const [data, setData] = useState<{
     data: any[] | null;
   } | null>(null);
+
+  const chartColors = ["#2D4059", "#002B5B", "#EA5455", "#F07B3F", "#2D4059"];
 
   useEffect(() => {
     (async function () {
@@ -29,7 +28,6 @@ export default function TabTwoScreen() {
       const total = amounts
         .filter((i) => Math.sign(i.amount) !== -1)
         .reduce((a, b) => a + b.amount, 0);
-      console.log(total, "total");
       setTotal(total);
 
       const purchases = amounts.filter(
@@ -46,36 +44,21 @@ export default function TabTwoScreen() {
 
       const chartData = amounts
         .filter((item) => item.amount > 0)
-        .map((item) => ({
+        .slice(0, 7)
+        .map((item, index) => ({
           value: Number(item.amount),
-          label: item.date,
+          label: item.date
+            ? new Date(item.date).toLocaleDateString("es-MX", {
+                day: "2-digit",
+                month: "short",
+              })
+            : "",
+          color: chartColors[index % chartColors.length],
         }));
-      setCharData(chartData);
+
+      setChartData(chartData);
     })();
   }, [id]);
-
-  const datos = [
-    { month: "Jan", signups: 180 },
-    { month: "Feb", signups: 520 },
-    { month: "Mar", signups: 260 },
-    { month: "Apr", signups: 740 },
-    { month: "May", signups: 390 },
-    { month: "Jun", signups: 860 },
-  ];
-
-  type ItemProps = { amount: number; datePay: string };
-
-  const Pay = ({ amount, datePay }: ItemProps) => (
-    <View style={styles.containerPayed}>
-      <Ionicons name="calendar-outline" size={24} color="white" />
-      <Text style={styles.datePayed}>{datePay}</Text>
-      <Text style={styles.amountPayed}>${Math.abs(amount)}</Text>
-    </View>
-  );
-  <View style={styles.header}>
-    <Text style={styles.headerTitle}>Historial</Text>
-    <DropdownUser data={data} />
-  </View>;
 
   return (
     <View style={styles.scrollView}>
@@ -83,39 +66,39 @@ export default function TabTwoScreen() {
         <Text style={styles.headerTitle}>Historial</Text>
         <DropdownUser data={data} />
       </View>
-      <FlatList
-        data={lastPayed}
-        renderItem={({ item }) => (
-          <Pay amount={item.amount} datePay={item.date} />
-        )}
-        keyExtractor={(item) => String(item.id)}
-        ListHeaderComponent={
-          <>
-            <Text style={styles.resumeClient}>Resumen del cliente</Text>
-
-            {chartData.length > 0 && (
-              <BarChart
-                data={datos}
-                xKey="month"
-                yKey="signups"
-                width={410}
-                height={240}
-              />
-            )}
-            <View style={styles.containerResume}>
-              <View style={{ display: "flex", flexDirection: "row", gap: 10 }}>
-                <FontAwesome5 name="shopify" size={24} color="white" />
-                <Text style={styles.totalPayed}>${total}</Text>
+      {id ? (
+        <FlatList
+          data={lastPayed}
+          keyExtractor={(item) => String(item.id)}
+          ListHeaderComponent={
+            <>
+              <Text style={styles.resumeClient}>Resumen del cliente</Text>
+              <View style={styles.containerResume}>
+                <BarChart data={chartData} />
+                <View
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    marginVertical: 30,
+                  }}
+                >
+                  <Text style={styles.totalPayed}>
+                    Total acumulado : ${total}
+                  </Text>
+                  <Text style={styles.totalPurchases}>
+                    Total de compras: {numberOfPurchases}
+                  </Text>
+                </View>
               </View>
-              <View style={{ display: "flex", flexDirection: "row", gap: 10 }}>
-                <FontAwesome name="shopping-basket" size={24} color="white" />
-                <Text style={styles.totalPurchases}>{numberOfPurchases}</Text>
-              </View>
-            </View>
-            <Text style={styles.payed}>Pagos</Text>
-          </>
-        }
-      />
+            </>
+          }
+        />
+      ) : (
+        <View style={styles.containerSelected}>
+          <Text style={{ color: "white" }}>Selecciona Usuario</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -169,6 +152,7 @@ const styles = StyleSheet.create({
     fontFamily: "Montserrat_600SemiBold",
     margin: 15,
     paddingLeft: 15,
+    marginTop: 30,
   },
   containerResume: {
     gap: 40,
@@ -177,16 +161,21 @@ const styles = StyleSheet.create({
   },
   totalPayed: {
     color: "white",
-    fontSize: 20,
+    fontSize: 16,
   },
   totalPurchases: {
     color: "white",
-    fontSize: 20,
+    fontSize: 16,
   },
   payed: {
     color: "white",
     marginVertical: 20,
     marginLeft: 30,
     fontSize: 20,
+  },
+  containerSelected: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
